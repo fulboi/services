@@ -88,7 +88,7 @@ async def get_students(db: db_dependency):
         raise HTTPException(status_code=404, detail="Connection error")
 
 @app.post("/add_student")
-async def add_question(name: str, db: db_dependency):
+async def add_student(name: str, db: db_dependency):
     try:
         student_db = StudentDB(
             name=name,
@@ -102,17 +102,17 @@ async def add_question(name: str, db: db_dependency):
         raise HTTPException(status_code=404, detail="Failed to add student")
 
 @app.delete("/reset_student")
-async def reset_student(student_id: int, db: db_dependency):
-    student_db = db.query(StudentDB).filter(StudentDB.id == student_id).first()
+async def reset_student(name: str, db: db_dependency):
+    student_db = db.query(StudentDB).filter(StudentDB.name == name).first()
     student_db.current_question = 0
     student_db.points = 0
     db.commit()
     return f"{student_db.name} score was cleared"
 
 @app.delete("/delete_student")
-async def delete_student(student_id: int, db: db_dependency):
+async def delete_student(name: str, db: db_dependency):
     try:
-        student_db = db.query(StudentDB).filter(StudentDB.id == student_id).first()
+        student_db = db.query(StudentDB).filter(StudentDB.name == name).first()
         if student_db:
             db.delete(student_db)
             db.commit()
