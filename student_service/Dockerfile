@@ -1,5 +1,5 @@
 FROM python:3.10
-цукцук
+
 WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt
