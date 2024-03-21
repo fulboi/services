@@ -1,8 +1,8 @@
 import os
 import uvicorn
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Form
 from typing import Annotated
-
+from keycloak import KeycloakOpenID
 from sqlalchemy.orm import Session
 
 from database import student_database as database
@@ -27,6 +27,43 @@ db_dependency = Annotated[Session, Depends(get_db)]
 current_question = 0
 student = 0
 
+KEYCLOAK_URL = "http://keycloak:8080/"
+KEYCLOAK_CLIENT_ID = "testClient"
+KEYCLOAK_REALM = "testRealm"
+KEYCLOAK_CLIENT_SECRET = "**********"
+
+user_token = ""
+keycloak_openid = KeycloakOpenID(server_url=KEYCLOAK_URL,
+                                  client_id=KEYCLOAK_CLIENT_ID,
+                                  realm_name=KEYCLOAK_REALM,
+                                  client_secret_key=KEYCLOAK_CLIENT_SECRET)
+
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
+
+@app.post("/get_jwt_token")
+async def login(username: str = Form(...), password: str = Form(...)):
+    try:
+        token = keycloak_openid.token(grant_type=["password"],
+                                      username=username,
+                                      password=password)
+        global user_token
+        user_token = token
+        return token
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail="Не удалось получить токен")
+
+def chech_for_role_test():
+    global user_token
+    token = user_token
+    try:
+        token_info = keycloak_openid.introspect(token["access_token"])
+        if "test" not in token_info["realm_access"]["roles"]:
+            raise HTTPException(status_code=403, detail="Access denied")
+        return token_info
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid token or access denied")
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 async def service_alive():
@@ -35,19 +72,21 @@ async def service_alive():
 
 @app.get("/login")
 async def login(name: str, db: db_dependency):
-    try:
-        student_db = db.query(StudentDB).filter(StudentDB.name == name).first()
-        global student
-        student = Student(
-            id=0,
-            name=student_db.name,
-            current_question=student_db.current_question,
-            points=student_db.points
-        )
-        return f"You logged in as {name}"
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="Student not found")
-
+    if (chech_for_role_test()):
+        try:
+            student_db = db.query(StudentDB).filter(StudentDB.name == name).first()
+            global student
+            student = Student(
+                id=0,
+                name=student_db.name,
+                current_question=student_db.current_question,
+                points=student_db.points
+            )
+            return f"You logged in as {name}"
+        except Exception as e:
+            raise HTTPException(status_code=404, detail="Student not found")
+    else:
+        return "Wrong JWT Token"
 
 @app.get("/get_question")
 async def get_question(db: db_dependency):
