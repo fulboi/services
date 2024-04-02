@@ -55,7 +55,7 @@ async def login(username: str = Form(...), password: str = Form(...)):
 
 def chech_for_role_test(token):
     try:
-        token_info = keycloak_openid.introspect(token["access_token"])
+        token_info = keycloak_openid.introspect(token)
         if "test" not in token_info["realm_access"]["roles"]:
             raise HTTPException(status_code=403, detail="Access denied")
         return token_info
