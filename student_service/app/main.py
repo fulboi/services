@@ -32,7 +32,6 @@ KEYCLOAK_CLIENT_ID = "testClient"
 KEYCLOAK_REALM = "testRealm"
 KEYCLOAK_CLIENT_SECRET = "**********"
 
-user_token = ""
 keycloak_openid = KeycloakOpenID(server_url=KEYCLOAK_URL,
                                   client_id=KEYCLOAK_CLIENT_ID,
                                   realm_name=KEYCLOAK_REALM,
@@ -54,9 +53,7 @@ async def login(username: str = Form(...), password: str = Form(...)):
         print(e)
         raise HTTPException(status_code=400, detail="Не удалось получить токен")
 
-def chech_for_role_test():
-    global user_token
-    token = user_token
+def chech_for_role_test(token):
     try:
         token_info = keycloak_openid.introspect(token["access_token"])
         if "test" not in token_info["realm_access"]["roles"]:
@@ -66,9 +63,11 @@ def chech_for_role_test():
         raise HTTPException(status_code=401, detail="Invalid token or access denied")
 
 @app.get("/health", status_code=status.HTTP_200_OK)
-async def service_alive():
-    return {'message': 'service alive'}
-
+async def service_alive(token:str = Header()):
+    if (chech_for_role_test(token)):
+        return {'message': 'service alive'}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid token or access denied")
 
 @app.get("/login")
 async def login(name: str, db: db_dependency):
