@@ -11,7 +11,7 @@ from database.student_database import StudentDB, QuestionDB
 from model.student import Student
 
 app = FastAPI()
-database.Base.metadata.create_all(bind=database.engine) \\test
+database.Base.metadata.create_all(bind=database.engine)
 
 
 def get_db():
@@ -20,7 +20,7 @@ def get_db():
         yield db
     finally:
         db.close()
-
+*
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
