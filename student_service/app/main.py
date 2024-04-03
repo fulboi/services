@@ -13,7 +13,7 @@ from model.student import Student
 app = FastAPI()
 database.Base.metadata.create_all(bind=database.engine)
 
-//test
+
 def get_db():
     db = database.SessionLocal()
     try:
